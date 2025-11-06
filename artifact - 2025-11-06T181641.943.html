@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مقایسه بصری حل TSP: الگوریتم ژنتیک در برابر یادگیری تقویتی</title>
+
+    <!-- فونت وزیرمتن -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.8;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        header h1 {
+            font-size: 2.5em;
+            color: #1a237e;
+        }
+        header p {
+            font-size: 1.2em;
+            color: #555;
+        }
+        .controls {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .control-group label {
+            font-weight: 500;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .control-group input[type="range"] {
+            width: 180px;
+        }
+        .control-group span {
+            font-weight: 700;
+            color: #1a237e;
+            background-color: #e8eaf6;
+            padding: 5px 10px;
+            border-radius: 5px;
+            min-width: 30px;
+            text-align: center;
+        }
+        #startButton {
+            padding: 12px 30px;
+            font-size: 1.2em;
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            align-self: flex-end;
+            margin-bottom: 5px;
+        }
+        #startButton:hover {
+            background-color: #218838;
+        }
+        #startButton:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        .visualizations {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .vis-card {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            max-width: 650px;
+            text-align: center;
+            flex: 1;
+            min-width: 640px;
+        }
+        .vis-card h2 {
+            color: #0d47a1;
+            border-bottom: 2px solid #bbdefb;
+            padding-bottom: 10px;
+        }
+        .vis-card p {
+            font-size: 0.95em;
+            color: #666;
+            min-height: 80px;
+        }
+        canvas {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .info-panel {
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        .info-panel .label { color: #555; }
+        .info-panel .value { color: #0d47a1; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>مقایسه بصری حل TSP: الگوریتم ژنتیک در برابر یادگیری تقویتی</h1>
+            <p>مشاهده همزمان فرآیند بهینه‌سازی جمعیت-محور (GA) و یادگیری تکرارشونده عامل-محور (RL)</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="numCities">تعداد شهرها</label>
+                <input type="range" id="numCities" min="5" max="70" value="30">
+                <span id="numCitiesValue">30</span>
+            </div>
+            <div class="control-group">
+                <label for="numIterations">نسل‌ها / دوره‌ها</label>
+                <input type="range" id="numIterations" min="10" max="5000" value="500">
+                <span id="numIterationsValue">500</span>
+            </div>
+            <div class="control-group">
+                <label for="speedSlider">سرعت شبیه‌سازی</label>
+                <input type="range" id="speedSlider" min="1" max="100" value="85">
+                <span id="speedSliderValue">سریع</span>
+            </div>
+            <button id="startButton">شروع شبیه‌سازی</button>
+        </div>
+
+        <div class="visualizations">
+            <div class="vis-card">
+                <h2>۱. شبیه‌سازی الگوریتم ژنتیک (GA)</h2>
+                <p>این شبیه‌سازی تکامل یک <strong>جمعیت</strong> از مسیرها را نشان می‌دهد. در هر نسل، بهترین مسیرها انتخاب شده، با هم ترکیب (Crossover) و دچار جهش (Mutation) می‌شوند تا نسل بعدی و بهتر را بسازند. مسیر سبز بهترین راه‌حل یافت‌شده است.</p>
+                <canvas id="gaCanvas" width="600" height="400"></canvas>
+                <div class="info-panel">
+                    <span class="label">نسل: </span><span class="value" id="generationCount">۰</span> / <span class="value" id="totalGenerations">۵۰۰</span><br>
+                    <span class="label">بهترین طول مسیر: </span><span class="value" id="bestGALength">۰</span>
+                </div>
+            </div>
+
+            <div class="vis-card">
+                <h2>۲. شبیه‌سازی یادگیری تقویتی (RL)</h2>
+                <p>این بخش، فرآیند آموزش یک <strong>عامل</strong> هوشمند را شبیه‌سازی می‌کند. در هر دوره (Epoch)، عامل با استفاده از سیاست آموخته‌شده خود، مسیر فعلی را بهبود می‌دهد. این بهبود تدریجی و هوشمندانه، هسته یادگیری تقویتی است.</p>
+                <canvas id="rlCanvas" width="600" height="400"></canvas>
+                <div class="info-panel">
+                    <span class="label">دوره (Epoch): </span><span class="value" id="epochCount">۰</span> / <span class="value" id="totalEpochs">۵۰۰</span><br>
+                    <span class="label">طول مسیر فعلی: </span><span class="value" id="currentRLLength">۰</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- عناصر UI ---
+        const numCitiesSlider = document.getElementById('numCities');
+        const numCitiesValue = document.getElementById('numCitiesValue');
+        const numIterationsSlider = document.getElementById('numIterations');
+        const numIterationsValue = document.getElementById('numIterationsValue');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedSliderValue = document.getElementById('speedSliderValue');
+        const startButton = document.getElementById('startButton');
+        
+        // --- عناصر نمایش اطلاعات ---
+        const generationCountEl = document.getElementById('generationCount');
+        const totalGenerationsEl = document.getElementById('totalGenerations');
+        const bestGALengthEl = document.getElementById('bestGALength');
+        const epochCountEl = document.getElementById('epochCount');
+        const totalEpochsEl = document.getElementById('totalEpochs');
+        const currentRLLengthEl = document.getElementById('currentRLLength');
+
+        // --- بوم‌های نقاشی ---
+        const gaCanvas = document.getElementById('gaCanvas');
+        const gaCtx = gaCanvas.getContext('2d');
+        const rlCanvas = document.getElementById('rlCanvas');
+        const rlCtx = rlCanvas.getContext('2d');
+
+        // --- متغیرهای شبیه‌سازی ---
+        let cities = [];
+        let isRunning = false;
+        let animationDelay = 100; 
+        let simulationsFinished = 0;
+
+        // --- به‌روزرسانی مقادیر اسلایدرها ---
+        numCitiesSlider.oninput = () => numCitiesValue.textContent = numCitiesSlider.value;
+        numIterationsSlider.oninput = () => {
+            numIterationsValue.textContent = numIterationsSlider.value;
+            totalGenerationsEl.textContent = numIterationsSlider.value;
+            totalEpochsEl.textContent = numIterationsSlider.value;
+        };
+        speedSlider.oninput = () => {
+            // تاخیر پایه را کمتر می‌کنیم تا سرعت‌های پایین هم سریع‌تر باشند
+            animationDelay = 210 - (speedSlider.value * 2); 
+            let speedText = "متوسط";
+            if (speedSlider.value > 95) speedText = "بسیار سریع";
+            else if (speedSlider.value > 75) speedText = "سریع";
+            else if (speedSlider.value < 20) speedText = "بسیار آهسته";
+            else if (speedSlider.value < 40) speedText = "آهسته";
+            speedSliderValue.textContent = speedText;
+        };
+
+        // --- توابع کمکی ---
+        function distance(city1, city2) {
+            return Math.sqrt(Math.pow(city1.x - city2.x, 2) + Math.pow(city1.y - city2.y, 2));
+        }
+
+        function calculateTotalDistance(path) {
+            let total = 0;
+            if (path.length < 2) return 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                total += distance(cities[path[i]], cities[path[i+1]]);
+            }
+            total += distance(cities[path[path.length - 1]], cities[path[0]]);
+            return total;
+        }
+        
+        // **BUG FIX:** This function now correctly returns the shuffled array.
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- توابع رسم ---
+        function drawCities(ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            cities.forEach((city, i) => {
+                ctx.beginPath();
+                ctx.arc(city.x, city.y, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = '#0d47a1';
+                ctx.fill();
+            });
+        }
+
+        function drawPath(ctx, path, color, lineWidth = 2) {
+            if (!path || path.length < 2) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            ctx.moveTo(cities[path[0]].x, cities[path[0]].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(cities[path[i]].x, cities[path[i]].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // --- منطق اصلی شبیه‌سازی ---
+        startButton.addEventListener('click', () => {
+            if (isRunning) return;
+            isRunning = true;
+            simulationsFinished = 0;
+            startButton.disabled = true;
+            startButton.textContent = "در حال اجرا...";
+            initializeSimulation();
+        });
+        
+        function simulationDone() {
+            simulationsFinished++;
+            if (simulationsFinished === 2) {
+                isRunning = false;
+                startButton.disabled = false;
+                startButton.textContent = "شروع مجدد";
+            }
+        }
+
+        function initializeSimulation() {
+            const numCities = parseInt(numCitiesSlider.value);
+            cities = [];
+            const padding = 20;
+            for (let i = 0; i < numCities; i++) {
+                cities.push({
+                    x: Math.random() * (gaCanvas.width - 2 * padding) + padding,
+                    y: Math.random() * (gaCanvas.height - 2 * padding) + padding
+                });
+            }
+
+            drawCities(gaCtx);
+            drawCities(rlCtx);
+
+            startGeneticAlgorithmAnimation();
+            startReinforcementLearningAnimation();
+        }
+
+        // 1. شبیه‌سازی الگوریتم ژنتیک (GA)
+        function startGeneticAlgorithmAnimation() {
+            const numGenerations = parseInt(numIterationsSlider.value);
+            const populationSize = 100;
+            const mutationRate = 0.05;
+            const elitismCount = 2;
+
+            let population = [];
+            const baseTour = Array.from({length: cities.length}, (_, i) => i);
+            for (let i = 0; i < populationSize; i++) {
+                population.push(shuffleArray([...baseTour]));
+            }
+
+            let bestGATour = population[0];
+            let bestGAFitness = 1 / calculateTotalDistance(bestGATour);
+            let currentGeneration = 0;
+
+            function crossover(parent1, parent2) {
+                const start = Math.floor(Math.random() * parent1.length);
+                const end = Math.floor(Math.random() * (parent1.length - start)) + start;
+                const child = Array(parent1.length).fill(null);
+                const segment = parent1.slice(start, end + 1);
+                
+                for(let i = start; i <= end; i++) child[i] = parent1[i];
+                
+                let parent2Index = 0;
+                for(let i = 0; i < child.length; i++) {
+                    if (child[i] === null) {
+                        while(segment.includes(parent2[parent2Index])) parent2Index++;
+                        child[i] = parent2[parent2Index++];
+                    }
+                }
+                return child;
+            }
+
+            function mutate(tour) {
+                for (let i = 0; i < tour.length; i++) {
+                    if (Math.random() < mutationRate) {
+                        const j = Math.floor(Math.random() * tour.length);
+                        [tour[i], tour[j]] = [tour[j], tour[i]];
+                    }
+                }
+                return tour;
+            }
+
+            function animateGeneration() {
+                if (currentGeneration >= numGenerations) {
+                    // نمایش آخرین فریم
+                    drawCities(gaCtx);
+                    drawPath(gaCtx, bestGATour, '#28a745', 3);
+                    generationCountEl.textContent = numGenerations;
+                    bestGALengthEl.textContent = (1 / bestGAFitness).toFixed(2);
+                    simulationDone();
+                    return;
+                }
+
+                // **بهینه‌سازی**: اجرای چند نسل در یک فریم برای سرعت‌های بالا
+                let stepsPerFrame = 1;
+                const speed = speedSlider.value;
+                if (speed > 95) stepsPerFrame = 20;
+                else if (speed > 75) stepsPerFrame = 5;
+
+                for(let step = 0; step < stepsPerFrame && currentGeneration < numGenerations; step++) {
+                    const fitness = population.map(tour => 1 / calculateTotalDistance(tour));
+                    const maxFitness = Math.max(...fitness);
+                    if (maxFitness > bestGAFitness) {
+                        bestGAFitness = maxFitness;
+                        bestGATour = population[fitness.indexOf(maxFitness)];
+                    }
+
+                    let newPopulation = [];
+                    const sortedIndices = fitness.map((_, i) => i).sort((a, b) => fitness[b] - fitness[a]);
+                    for (let i = 0; i < elitismCount; i++) {
+                        newPopulation.push([...population[sortedIndices[i]]]);
+                    }
+                    
+                    while (newPopulation.length < populationSize) {
+                        const parent1 = population[sortedIndices[Math.floor(Math.random() * populationSize / 2)]];
+                        const parent2 = population[sortedIndices[Math.floor(Math.random() * populationSize / 2)]];
+                        let child = crossover(parent1, parent2);
+                        child = mutate(child);
+                        newPopulation.push(child);
+                    }
+                    population = newPopulation;
+                    currentGeneration++;
+                }
+
+                drawCities(gaCtx);
+                drawPath(gaCtx, bestGATour, '#28a745', 3);
+                generationCountEl.textContent = currentGeneration;
+                bestGALengthEl.textContent = (1 / bestGAFitness).toFixed(2);
+                
+                setTimeout(animateGeneration, animationDelay);
+            }
+            animateGeneration();
+        }
+
+        // 2. شبیه‌سازی یادگیری تقویتی (RL)
+        function startReinforcementLearningAnimation() {
+            const numEpochs = parseInt(numIterationsSlider.value);
+            let currentRLTour = shuffleArray(Array.from({length: cities.length}, (_, i) => i));
+            let currentEpoch = 0;
+
+            function improveTourWith2Opt(tour) {
+                let bestDist = calculateTotalDistance(tour);
+                for (let i = 0; i < tour.length - 1; i++) {
+                    for (let j = i + 1; j < tour.length; j++) {
+                        const newTour = [...tour];
+                        // Reversing the segment between i and j
+                        const segment = newTour.slice(i, j + 1).reverse();
+                        for(let k = 0; k < segment.length; k++){
+                            newTour[i+k] = segment[k];
+                        }
+                        
+                        const newDist = calculateTotalDistance(newTour);
+                        if (newDist < bestDist) {
+                            // Return the first improvement found for this epoch step
+                            return newTour;
+                        }
+                    }
+                }
+                return tour; // No improvement found
+            }
+
+            function animateEpoch() {
+                if (currentEpoch >= numEpochs) {
+                    // نمایش آخرین فریم
+                    drawCities(rlCtx);
+                    drawPath(rlCtx, currentRLTour, '#dc3545', 3);
+                    epochCountEl.textContent = numEpochs;
+                    currentRLLengthEl.textContent = calculateTotalDistance(currentRLTour).toFixed(2);
+                    simulationDone();
+                    return;
+                }
+                
+                // **بهینه‌سازی**: اجرای چند دوره در یک فریم برای سرعت‌های بالا
+                let stepsPerFrame = 1;
+                const speed = speedSlider.value;
+                if (speed > 95) stepsPerFrame = 20;
+                else if (speed > 75) stepsPerFrame = 5;
+
+                for(let step = 0; step < stepsPerFrame && currentEpoch < numEpochs; step++){
+                     currentRLTour = improveTourWith2Opt(currentRLTour);
+                     currentEpoch++;
+                }
+
+                drawCities(rlCtx);
+                drawPath(rlCtx, currentRLTour, '#dc3545', 3);
+                epochCountEl.textContent = currentEpoch;
+                currentRLLengthEl.textContent = calculateTotalDistance(currentRLTour).toFixed(2);
+                
+                setTimeout(animateEpoch, animationDelay);
+            }
+            animateEpoch();
+        }
+        
+        // مقداردهی اولیه UI
+        numCitiesSlider.oninput();
+        numIterationsSlider.oninput();
+        speedSlider.oninput();
+    </script>
+
+</body>
+</html>
